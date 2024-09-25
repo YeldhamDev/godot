@@ -700,7 +700,12 @@ void Window::_rect_changed_callback(const Rect2i &p_callback) {
 	if (size == p_callback.size && position == p_callback.position) {
 		return;
 	}
-	position = p_callback.position;
+
+	if (position != p_callback.position) {
+		position = p_callback.position;
+		_propagate_window_notification(this, NOTIFICATION_WM_POSITION_CHANGED);
+		emit_signal(SceneStringName(position_changed));
+	}
 
 	if (size != p_callback.size) {
 		size = p_callback.size;
@@ -766,7 +771,6 @@ void Window::_event_callback(DisplayServer::WindowEvent p_event) {
 			focused = true;
 			_propagate_window_notification(this, NOTIFICATION_WM_WINDOW_FOCUS_IN);
 			emit_signal(SceneStringName(focus_entered));
-
 		} break;
 		case DisplayServer::WINDOW_EVENT_FOCUS_OUT: {
 			focused = false;
@@ -791,6 +795,9 @@ void Window::_event_callback(DisplayServer::WindowEvent p_event) {
 		} break;
 		case DisplayServer::WINDOW_EVENT_TITLEBAR_CHANGE: {
 			emit_signal(SNAME("titlebar_changed"));
+		} break;
+		case DisplayServer::WINDOW_EVENT_POSITION_CHANGED: {
+			emit_signal(SNAME("position_changed"));
 		} break;
 	}
 }
@@ -3036,6 +3043,7 @@ void Window::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("theme_changed"));
 	ADD_SIGNAL(MethodInfo("dpi_changed"));
 	ADD_SIGNAL(MethodInfo("titlebar_changed"));
+	ADD_SIGNAL(MethodInfo("position_changed"));
 
 	BIND_CONSTANT(NOTIFICATION_VISIBILITY_CHANGED);
 	BIND_CONSTANT(NOTIFICATION_THEME_CHANGED);
@@ -3054,6 +3062,7 @@ void Window::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_POPUP);
 	BIND_ENUM_CONSTANT(FLAG_EXTEND_TO_TITLE);
 	BIND_ENUM_CONSTANT(FLAG_MOUSE_PASSTHROUGH);
+	BIND_ENUM_CONSTANT(FLAG_HIDDEN);
 	BIND_ENUM_CONSTANT(FLAG_MAX);
 
 	BIND_ENUM_CONSTANT(CONTENT_SCALE_MODE_DISABLED);

@@ -32,6 +32,7 @@
 #define EDITOR_RUN_H
 
 #include "core/os/os.h"
+#include "servers/display_server.h"
 
 class EditorRun {
 public:
@@ -58,6 +59,7 @@ public:
 	void stop_child_process(OS::ProcessID p_pid);
 	bool has_child_process(OS::ProcessID p_pid) const;
 	int get_child_process_count() const { return pids.size(); }
+	OS::ProcessID get_current_process() const;
 
 	EditorRun();
 };

@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_run_bar.h                                                      */
+/*  embedded_process.h                                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,91 +28,51 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_RUN_BAR_H
-#define EDITOR_RUN_BAR_H
+#ifndef EMBEDDED_PROCESS_H
+#define EMBEDDED_PROCESS_H
 
-#include "editor/editor_run.h"
-#include "editor/export/editor_export.h"
-#include "scene/gui/margin_container.h"
+#include "scene/gui/control.h"
 
-class Button;
-class EditorRunNative;
-class PanelContainer;
-class HBoxContainer;
+class EmbeddedProcess : public Control {
+	GDCLASS(EmbeddedProcess, Control);
 
-class EditorRunBar : public MarginContainer {
-	GDCLASS(EditorRunBar, MarginContainer);
+	OS::ProcessID _current_process_id = 0;
+	bool _embedding_completed = false;
+	uint64_t _start_embedding_time = 0;
 
-	static EditorRunBar *singleton;
+	Window *_window = nullptr;
+	Timer *timer_embedding = nullptr;
 
-	enum RunMode {
-		STOPPED = 0,
-		RUN_MAIN,
-		RUN_CURRENT,
-		RUN_CUSTOM,
-	};
+	int _embedding_timeout = 45000;
 
-	PanelContainer *main_panel = nullptr;
-	HBoxContainer *main_hbox = nullptr;
+	bool _keep_aspect = false;
+	Size2i _window_size;
 
-	Button *play_button = nullptr;
-	Button *pause_button = nullptr;
-	Button *stop_button = nullptr;
-	Button *play_scene_button = nullptr;
-	Button *play_custom_scene_button = nullptr;
-
-	EditorRun editor_run;
-	EditorRunNative *run_native = nullptr;
-
-	PanelContainer *write_movie_panel = nullptr;
-	Button *write_movie_button = nullptr;
-
-	RunMode current_mode = RunMode::STOPPED;
-	String run_custom_filename;
-	String run_current_filename;
-
-	void _reset_play_buttons();
-	void _update_play_buttons();
-
-	void _write_movie_toggled(bool p_enabled);
-	void _quick_run_selected(const String &p_file_path);
-
-	void _play_current_pressed();
-	void _play_custom_pressed();
-
-	void _run_scene(const String &p_scene_path = "");
-	void _run_native(const Ref<EditorExportPreset> &p_preset);
+	void _try_embed_process();
+	void _update_embedded_process();
+	void _timer_embedding_timeout();
 
 protected:
-	void _notification(int p_what);
 	static void _bind_methods();
+	void _notification(int p_what);
 
 public:
-	static EditorRunBar *get_singleton() { return singleton; }
+	void embed_process(OS::ProcessID p_pid);
+	void reset();
 
-	void play_main_scene(bool p_from_native = false);
-	void play_current_scene(bool p_reload = false);
-	void play_custom_scene(const String &p_custom);
-	void restart();
+	void set_embedding_timeout(int p_timeout);
+	int get_embedding_timeout();
+	void set_window_size(Size2i p_window_size);
+	Size2i get_window_size();
+	void set_keep_aspect(bool p_keep_aspect);
+	bool get_keep_aspect();
+	Rect2i get_global_embedded_window_rect();
+	Rect2i get_screen_embedded_window_rect();
+	bool is_embedding_in_progress();
+	bool is_embedding_completed();
 
-	void stop_playing();
-	bool is_playing() const;
-	String get_playing_scene() const;
-
-	Error start_native_device(int p_device_id);
-
-	OS::ProcessID has_child_process(OS::ProcessID p_pid) const;
-	void stop_child_process(OS::ProcessID p_pid);
-	OS::ProcessID get_current_process() const;
-
-	void set_movie_maker_enabled(bool p_enabled);
-	bool is_movie_maker_enabled() const;
-
-	Button *get_pause_button() { return pause_button; }
-
-	HBoxContainer *get_buttons_container();
-
-	EditorRunBar();
+	EmbeddedProcess();
+	~EmbeddedProcess();
 };
 
-#endif // EDITOR_RUN_BAR_H
+#endif // EMBEDDED_PROCESS_H
