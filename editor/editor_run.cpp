@@ -34,6 +34,7 @@
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
+#include "editor/plugins/game_editor_plugin.h"
 #include "editor/run_instances_dialog.h"
 #include "main/main.h"
 #include "servers/display_server.h"
@@ -234,6 +235,9 @@ Error EditorRun::run(const String &p_scene, const String &p_write_movie) {
 		List<String> instance_args(args);
 		RunInstancesDialog::get_singleton()->get_argument_list_for_instance(i, instance_args);
 		RunInstancesDialog::get_singleton()->apply_custom_features(i);
+		if (GameEditor::get_singleton()) {
+			GameEditor::get_singleton()->get_argument_list_for_instance(i, instance_args);
+		}
 
 		if (OS::get_singleton()->is_stdout_verbose()) {
 			print_line(vformat("Running: %s", exec));
@@ -284,6 +288,13 @@ void EditorRun::stop() {
 
 	status = STATUS_STOP;
 	running_scene = "";
+}
+
+OS::ProcessID EditorRun::get_current_process() const {
+	if (pids.is_empty()) {
+		return 0;
+	}
+	return pids.get(0);
 }
 
 EditorRun::EditorRun() {

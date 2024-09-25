@@ -36,7 +36,10 @@
 #include "editor/plugins/editor_plugin.h"
 #include "scene/debugger/scene_debugger.h"
 #include "scene/gui/box_container.h"
+#include "scene/gui/embedded_process.h"
+#include "scene/gui/label.h"
 #include "scene/gui/menu_button.h"
+#include "scene/gui/separator.h"
 
 class GameEditorDebugger : public EditorDebuggerPlugin {
 	GDCLASS(GameEditorDebugger, EditorDebuggerPlugin);
@@ -85,6 +88,7 @@ class GameEditor : public VBoxContainer {
 		CAMERA_MODE_EDITORS
 	};
 
+	static GameEditor *singleton;
 	Ref<GameEditorDebugger> debugger;
 
 	int active_sessions = 0;
@@ -94,6 +98,10 @@ class GameEditor : public VBoxContainer {
 
 	Button *node_type_button[RuntimeNodeSelect::NODE_TYPE_MAX];
 	Button *select_mode_button[RuntimeNodeSelect::SELECT_MODE_MAX];
+	VSeparator *embedding_separator;
+	Button *embedded_button;
+	Button *auto_focus_button;
+	Button *keep_aspect_button;
 
 	Button *hide_selection = nullptr;
 
@@ -101,6 +109,8 @@ class GameEditor : public VBoxContainer {
 	MenuButton *camera_override_menu = nullptr;
 
 	Panel *panel = nullptr;
+	EmbeddedProcess *embedded_process = nullptr;
+	Label *state_label = nullptr;
 
 	void _sessions_changed();
 
@@ -110,6 +120,18 @@ class GameEditor : public VBoxContainer {
 
 	void _node_type_pressed(int p_option);
 	void _select_mode_pressed(int p_option);
+	void _embedded_button_pressed();
+	void _auto_focus_button_pressed();
+	void _keep_aspect_button_pressed();
+
+	void _play_pressed();
+	void _stop_pressed();
+	void _embedding_completed();
+	void _embedding_failed();
+	void _project_settings_changed();
+
+	void _update_ui();
+	void _update_embed_window_size();
 
 	void _hide_selection_toggled(bool p_pressed);
 
@@ -120,7 +142,12 @@ protected:
 	void _notification(int p_what);
 
 public:
+	static GameEditor *get_singleton();
+
+	void get_argument_list_for_instance(int p_idx, List<String> &r_list);
+
 	GameEditor(Ref<GameEditorDebugger> p_debugger);
+	~GameEditor();
 };
 
 class GameEditorPlugin : public EditorPlugin {

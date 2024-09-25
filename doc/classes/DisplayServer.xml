@@ -1883,6 +1883,12 @@
 		<constant name="FEATURE_NATIVE_DIALOG_FILE" value="25" enum="Feature">
 			Display server supports spawning dialogs for selecting files or directories using the operating system's native look-and-feel. See [method file_dialog_show] and [method file_dialog_with_options_show]. [b]Windows, macOS, Linux (X11/Wayland)[/b]
 		</constant>
+		<constant name="FEATURE_WINDOW_EMBEDDING" value="26" enum="Feature">
+			Display server supports embedding a window from another process. [b]Windows, Linux (X11)[/b]
+		</constant>
+		<constant name="FEATURE_WINDOW_HIDDEN" value="27" enum="Feature">
+			Display server supports hiding a window without destroying it. [b]Windows, Linux (X11)[/b]
+		</constant>
 		<constant name="MOUSE_MODE_VISIBLE" value="0" enum="MouseMode">
 			Makes the mouse cursor visible if it is hidden.
 		</constant>
@@ -2092,7 +2098,7 @@
 		<constant name="WINDOW_FLAG_MOUSE_PASSTHROUGH" value="7" enum="WindowFlags">
 			All mouse events are passed to the underlying window of the same application.
 		</constant>
-		<constant name="WINDOW_FLAG_MAX" value="8" enum="WindowFlags">
+		<constant name="WINDOW_FLAG_MAX" value="9" enum="WindowFlags">
 			Max value of the [enum WindowFlags].
 		</constant>
 		<constant name="WINDOW_EVENT_MOUSE_ENTER" value="0" enum="WindowEvent">

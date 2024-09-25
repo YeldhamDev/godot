@@ -2052,7 +2052,9 @@ void DisplayServerX11::window_set_current_screen(int p_screen, WindowID p_window
 	_THREAD_SAFE_METHOD_
 
 	ERR_FAIL_COND(!windows.has(p_window));
-	WindowData &wd = windows[p_window];	
+	WindowData &wd = windows[p_window];
+
+	ERR_FAIL_COND_MSG(wd.embed_parent, "Embedded window can't be moved to another screen.");
 
 	p_screen = _get_screen_index(p_screen);
 	ERR_FAIL_INDEX(p_screen, get_screen_count());
@@ -2060,8 +2062,6 @@ void DisplayServerX11::window_set_current_screen(int p_screen, WindowID p_window
 	if (window_get_current_screen(p_window) == p_screen) {
 		return;
 	}
-
-	ERR_FAIL_COND_MSG(wd.embed_parent, "Embedded window can't be moved to another screen.");
 
 	if (window_get_mode(p_window) == WINDOW_MODE_FULLSCREEN) {
 		Point2i position = screen_get_position(p_screen);
@@ -2298,7 +2298,7 @@ Size2i DisplayServerX11::window_get_min_size(WindowID p_window) const {
 
 void DisplayServerX11::window_set_size(const Size2i p_size, WindowID p_window) {
 	_THREAD_SAFE_METHOD_
-
+	
 	ERR_FAIL_COND(!windows.has(p_window));
 
 	Size2i size = p_size;
@@ -2719,14 +2719,14 @@ void DisplayServerX11::window_set_mode(WindowMode p_mode, WindowID p_window) {
 	ERR_FAIL_COND(!windows.has(p_window));
 	WindowData &wd = windows[p_window];
 
+	ERR_FAIL_COND_MSG(p_mode != WINDOW_MODE_WINDOWED && wd.embed_parent, "Embedded window only support Windowed mode.");
+
 	WindowMode old_mode = window_get_mode(p_window);
 	if (old_mode == p_mode) {
 		return; // do nothing
 	}
-
-	ERR_FAIL_COND_MSG(p_mode != WINDOW_MODE_WINDOWED && wd.embed_parent, "Embedded window only support Windowed mode.");
-
 	//remove all "extra" modes
+
 	switch (old_mode) {
 		case WINDOW_MODE_WINDOWED: {
 			//do nothing
@@ -2827,8 +2827,6 @@ void DisplayServerX11::window_set_flag(WindowFlags p_flag, bool p_enabled, Windo
 	switch (p_flag) {
 		case WINDOW_FLAG_RESIZE_DISABLED: {
 			wd.resize_disabled = p_enabled;
-
-			ERR_FAIL_COND_MSG(p_enabled && wd.embed_parent, "Embedded window resize can't be disabled.");
 
 			_update_size_hints(p_window);
 
@@ -3012,7 +3010,11 @@ bool DisplayServerX11::window_is_focused(WindowID p_window) const {
 
 	const WindowData &wd = windows[p_window];
 
-	return wd.focused;
+	Window focused_window;
+	int focus_ret_state;
+	XGetInputFocus(x11_display, &focused_window, &focus_ret_state);
+
+	return wd.x11_window == focused_window;
 }
 
 bool DisplayServerX11::window_can_draw(WindowID p_window) const {
@@ -3060,7 +3062,7 @@ void DisplayServerX11::window_set_ime_active(const bool p_active, WindowID p_win
 		XWindowAttributes xwa;
 		XSync(x11_display, False);
 		XGetWindowAttributes(x11_display, wd.x11_xim_window, &xwa);
-		if (xwa.map_state == IsViewable && _window_focus_check()) {
+		if (xwa.map_state == IsViewable) {
 			_set_input_focus(wd.x11_xim_window, RevertToParent);
 		}
 		XSetICFocus(wd.xic);
@@ -4330,7 +4332,7 @@ bool DisplayServerX11::_window_focus_check() {
 
 	bool has_focus = false;
 	for (const KeyValue<int, DisplayServerX11::WindowData> &wid : windows) {
-		if (wid.value.x11_window == focused_window || (wid.value.xic && wid.value.ime_active && wid.value.x11_xim_window == focused_window)) {
+		if (wid.value.x11_window == focused_window) {
 			has_focus = true;
 			break;
 		}
@@ -4621,15 +4623,6 @@ void DisplayServerX11::process_events() {
 
 				// Have we failed to set fullscreen while the window was unmapped?
 				_validate_mode_on_map(window_id);
-			} break;
-
-			case UnmapNotify: {
-				DEBUG_LOG_X11("[%u] UnmapNotify window=%lu (%u) \n", frame, event.xmap.window, window_id);
-				if (ime_window_event) {
-					break;
-				}
-				WindowData &wd = windows[window_id];
-				wd.hidden = true;
 			} break;
 
 			case Expose: {
@@ -5555,7 +5548,7 @@ Error DisplayServerX11::embed_process(WindowID p_window, OS::ProcessID p_pid, co
 
 	DEBUG_LOG_X11("Starting embeding %ld to window %lu \n", p_pid, wd.x11_window);
 
-	EmbeddedProcessData *ep = nullptr;	
+	EmbeddedProcessData *ep = nullptr;
 	if (embedded_processes.has(p_pid)) {
 		ep = embedded_processes.get(p_pid);
 	} else {
@@ -5564,14 +5557,20 @@ Error DisplayServerX11::embed_process(WindowID p_window, OS::ProcessID p_pid, co
 		if (!process_window) {
 			return ERR_DOES_NOT_EXIST;
 		}
+
 		DEBUG_LOG_X11("Process %ld window found: %lu \n", p_pid, process_window);
+
 		ep = memnew(EmbeddedProcessData);
 		ep->process_window = process_window;
 		ep->visible = true;
+
 		XSetTransientForHint(x11_display, process_window, wd.x11_window);
+
 		_set_window_taskbar_pager_enabled(process_window, false);
+
 		embedded_processes.insert(p_pid, ep);
 	}
+
 
 	// Handle bad window errors silently because just in case the embedded window was closed.
 	int (*oldHandler)(Display *, XErrorEvent *) = XSetErrorHandler(&bad_window_error_handler);
@@ -5594,6 +5593,7 @@ Error DisplayServerX11::embed_process(WindowID p_window, OS::ProcessID p_pid, co
 
 	// Restore default error handler.
 	XSetErrorHandler(oldHandler);
+
 	return OK;
 }
 
@@ -5716,6 +5716,8 @@ DisplayServerX11::WindowID DisplayServerX11::_create_window(WindowMode p_mode, V
 		wd.hidden = true;
 	}
 
+	wd.embed_parent = p_parent_window;
+
 	// Setup for menu subwindows:
 	// - override_redirect forces the WM not to interfere with the window, to avoid delays due to
 	//   handling decorations and placement.
@@ -5757,11 +5759,9 @@ DisplayServerX11::WindowID DisplayServerX11::_create_window(WindowMode p_mode, V
 		wd.x11_window = XCreateWindow(x11_display, RootWindow(x11_display, visualInfo.screen), win_rect.position.x, win_rect.position.y, win_rect.size.width > 0 ? win_rect.size.width : 1, win_rect.size.height > 0 ? win_rect.size.height : 1, 0, visualInfo.depth, InputOutput, visualInfo.visual, valuemask, &windowAttributes);
 
 		wd.parent = RootWindow(x11_display, visualInfo.screen);
-		
 		DEBUG_LOG_X11("CreateWindow window=%lu, parent: %lu \n", wd.x11_window, wd.parent);
 
 		if (p_parent_window) {
-			wd.embed_parent = p_parent_window;
 			XSetTransientForHint(x11_display, wd.x11_window, p_parent_window);
 		}
 
@@ -5936,7 +5936,6 @@ DisplayServerX11::WindowID DisplayServerX11::_create_window(WindowMode p_mode, V
 			// Disable the window in the taskbar and alt-tab.
 			_set_window_taskbar_pager_enabled(wd.x11_window, false);
 		}
-
 		_update_size_hints(id);
 
 #if defined(RD_ENABLED)
