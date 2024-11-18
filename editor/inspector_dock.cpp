@@ -351,7 +351,7 @@ void InspectorDock::_prepare_history() {
 			}
 		} else if (Object::cast_to<Node>(obj)) {
 			text = Object::cast_to<Node>(obj)->get_name();
-		} else if (obj->is_class("EditorDebuggerRemoteObject")) {
+		} else if (obj->is_class("EditorDebuggerRemoteObject") || obj->is_class("EditorDebuggerMultiRemoteObject")) {
 			text = obj->call("get_title");
 		} else {
 			text = obj->get_class();

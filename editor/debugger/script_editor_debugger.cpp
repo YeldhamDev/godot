@@ -33,10 +33,8 @@
 #include "core/config/project_settings.h"
 #include "core/debugger/debugger_marshalls.h"
 #include "core/debugger/remote_debugger.h"
-#include "core/io/marshalls.h"
 #include "core/string/ustring.h"
 #include "core/version.h"
-#include "editor/debugger/debug_adapter/debug_adapter_protocol.h"
 #include "editor/debugger/editor_expression_evaluator.h"
 #include "editor/debugger/editor_performance_profiler.h"
 #include "editor/debugger/editor_profiler.h"
@@ -48,6 +46,7 @@
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
 #include "editor/gui/editor_file_dialog.h"
+#include "editor/gui/editor_toaster.h"
 #include "editor/inspector_dock.h"
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #include "editor/plugins/editor_debugger_plugin.h"
@@ -77,7 +76,8 @@ void ScriptEditorDebugger::_put_msg(const String &p_message, const Array &p_data
 		msg.push_back(p_message);
 		msg.push_back(p_thread_id);
 		msg.push_back(p_data);
-		peer->put_message(msg);
+		Error err = peer->put_message(msg);
+		ERR_FAIL_COND_MSG(err != OK, vformat("Failed to send message %d", err));
 	}
 }
 
@@ -257,19 +257,40 @@ void ScriptEditorDebugger::request_remote_evaluate(const String &p_expression, i
 	_put_msg("evaluate", msg);
 }
 
-void ScriptEditorDebugger::update_remote_object(ObjectID p_obj_id, const String &p_prop, const Variant &p_value) {
+void ScriptEditorDebugger::update_remote_object(ObjectID p_obj_id, const String &p_prop, const Variant &p_value, const String &p_field) {
 	Array msg;
 	msg.push_back(p_obj_id);
 	msg.push_back(p_prop);
 	msg.push_back(p_value);
-	_put_msg("scene:set_object_property", msg);
+	if (p_field.is_empty()) {
+		_put_msg("scene:set_object_property", msg);
+	} else {
+		msg.push_back(p_field);
+		_put_msg("scene:set_object_property_field", msg);
+	}
 }
 
-void ScriptEditorDebugger::request_remote_object(ObjectID p_obj_id) {
+void ScriptEditorDebugger::request_remote_object(ObjectID p_obj_id, bool p_update_selection) {
 	ERR_FAIL_COND(p_obj_id.is_null());
 	Array msg;
 	msg.push_back(p_obj_id);
+	msg.push_back(p_update_selection);
 	_put_msg("scene:inspect_object", msg);
+}
+
+void ScriptEditorDebugger::request_multi_remote_objects(const TypedArray<uint64_t> &p_obj_ids, bool p_update_selection) {
+	ERR_FAIL_COND(p_obj_ids.is_empty());
+	Array msg;
+	msg.push_back(p_obj_ids.duplicate());
+	msg.push_back(p_update_selection);
+	_put_msg("scene:inspect_multi_objects", msg);
+}
+
+void ScriptEditorDebugger::clear_inspector(bool p_send_msg) {
+	inspector->clear_remote_inspector();
+	if (p_send_msg) {
+		_put_msg("scene:clear_selection", Array());
+	}
 }
 
 Object *ScriptEditorDebugger::get_remote_object(ObjectID p_id) {
@@ -283,6 +304,14 @@ void ScriptEditorDebugger::_remote_object_selected(ObjectID p_id) {
 void ScriptEditorDebugger::_remote_object_edited(ObjectID p_id, const String &p_prop, const Variant &p_value) {
 	update_remote_object(p_id, p_prop, p_value);
 	request_remote_object(p_id);
+}
+
+void ScriptEditorDebugger::_multi_remote_objects_edited(const String &p_prop, const TypedDictionary<uint64_t, Variant> &p_values, const String &p_field) {
+	const Array &ids = p_values.keys();
+	for (const uint64_t id : ids) {
+		update_remote_object(ObjectID(id), p_prop, p_values[id], p_field);
+	}
+	request_multi_remote_objects(p_values.keys());
 }
 
 void ScriptEditorDebugger::_remote_object_property_updated(ObjectID p_id, const String &p_property) {
@@ -404,9 +433,27 @@ void ScriptEditorDebugger::_parse_message(const String &p_msg, uint64_t p_thread
 		emit_signal(SNAME("remote_tree_updated"));
 		_update_buttons_state();
 	} else if (p_msg == "scene:inspect_object") {
-		ObjectID id = inspector->add_object(p_data);
-		if (id.is_valid()) {
-			emit_signal(SNAME("remote_object_updated"), id);
+		ERR_FAIL_COND(p_data.is_empty());
+		ERR_FAIL_COND(p_data[0].get_type() != Variant::INT);
+		TypedArray<uint64_t> arr;
+		arr.append(p_data[0]);
+		if (EditorDebuggerNode::get_singleton()->match_remote_selection(arr)) {
+			inspector->add_object(p_data);
+			emit_signal(SNAME("remote_object_updated"), p_data[0]);
+		}
+	} else if (p_msg == "scene:inspect_multi_objects") {
+		ERR_FAIL_COND(p_data.is_empty());
+
+		TypedArray<uint64_t> ids;
+		for (const Array arr : p_data) {
+			ERR_FAIL_COND(arr.is_empty());
+			ERR_FAIL_COND(arr[0].get_type() != Variant::INT);
+			ids.append(arr[0]);
+		}
+
+		if (EditorDebuggerNode::get_singleton()->match_remote_selection(ids)) {
+			EditorDebuggerMultiRemoteObject *multi = inspector->get_multi_objects(p_data);
+			emit_signal(SNAME("multi_remote_object_updated"), multi);
 		}
 	} else if (p_msg == "servers:memory_usage") {
 		vmem_tree->clear();
@@ -808,9 +855,29 @@ void ScriptEditorDebugger::_parse_message(const String &p_msg, uint64_t p_thread
 		emit_signal(SNAME("stop_requested"));
 		_stop_and_notify();
 	} else if (p_msg == "remote_node_clicked") {
-		if (!p_data.is_empty()) {
-			emit_signal(SNAME("remote_tree_select_requested"), p_data[0]);
+		ERR_FAIL_COND(p_data.is_empty());
+		ObjectID id = inspector->add_object(p_data);
+		if (id.is_valid()) {
+			EditorDebuggerNode::get_singleton()->stop_waiting_inspection();
+
+			emit_signal(SNAME("remote_object_updated"), id);
+			emit_signal(SNAME("remote_tree_select_requested"), id);
 		}
+	} else if (p_msg == "multi_remote_nodes_clicked") {
+		ERR_FAIL_COND(p_data.is_empty());
+		EditorDebuggerMultiRemoteObject *multi = inspector->get_multi_objects(p_data);
+		if (multi) {
+			EditorDebuggerNode::get_singleton()->stop_waiting_inspection();
+
+			emit_signal(SNAME("multi_remote_object_updated"), multi);
+			emit_signal(SNAME("remote_tree_multi_select_requested"), multi->remote_object_ids);
+		}
+	} else if (p_msg == "remote_nothing_clicked") {
+		EditorDebuggerNode::get_singleton()->stop_waiting_inspection();
+
+		emit_signal(SNAME("remote_tree_clear_selection_requested"));
+	} else if (p_msg == "show_selection_limit_warning") {
+		EditorToaster::get_singleton()->popup_str(vformat(TTR("Some remote nodes were not selected, as the configured maximum selection is %d. This can be changed at \"debugger/max_node_selection\" in the Editor Settings."), EDITOR_GET("debugger/max_node_selection")), EditorToaster::SEVERITY_WARNING);
 	} else if (p_msg == "performance:profile_names") {
 		Vector<StringName> monitors;
 		monitors.resize(p_data.size());
@@ -1768,7 +1835,7 @@ void ScriptEditorDebugger::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("live_debug_duplicate_node"), &ScriptEditorDebugger::live_debug_duplicate_node);
 	ClassDB::bind_method(D_METHOD("live_debug_reparent_node"), &ScriptEditorDebugger::live_debug_reparent_node);
 	ClassDB::bind_method(D_METHOD("request_remote_object", "id"), &ScriptEditorDebugger::request_remote_object);
-	ClassDB::bind_method(D_METHOD("update_remote_object", "id", "property", "value"), &ScriptEditorDebugger::update_remote_object);
+	ClassDB::bind_method(D_METHOD("update_remote_object", "id", "property", "value", "field"), &ScriptEditorDebugger::update_remote_object);
 
 	ADD_SIGNAL(MethodInfo("started"));
 	ADD_SIGNAL(MethodInfo("stopped"));
@@ -1781,9 +1848,12 @@ void ScriptEditorDebugger::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("breaked", PropertyInfo(Variant::BOOL, "reallydid"), PropertyInfo(Variant::BOOL, "can_debug"), PropertyInfo(Variant::STRING, "reason"), PropertyInfo(Variant::BOOL, "has_stackdump")));
 	ADD_SIGNAL(MethodInfo("remote_object_requested", PropertyInfo(Variant::INT, "id")));
 	ADD_SIGNAL(MethodInfo("remote_object_updated", PropertyInfo(Variant::INT, "id")));
+	ADD_SIGNAL(MethodInfo("multi_remote_object_updated", PropertyInfo(Variant::OBJECT, "multi_object")));
 	ADD_SIGNAL(MethodInfo("remote_object_property_updated", PropertyInfo(Variant::INT, "id"), PropertyInfo(Variant::STRING, "property")));
 	ADD_SIGNAL(MethodInfo("remote_tree_updated"));
-	ADD_SIGNAL(MethodInfo("remote_tree_select_requested", PropertyInfo(Variant::NODE_PATH, "path")));
+	ADD_SIGNAL(MethodInfo("remote_tree_select_requested", PropertyInfo(Variant::INT, "id")));
+	ADD_SIGNAL(MethodInfo("remote_tree_multi_select_requested", PropertyInfo(Variant::ARRAY, "ids")));
+	ADD_SIGNAL(MethodInfo("remote_tree_clear_selection_requested"));
 	ADD_SIGNAL(MethodInfo("output", PropertyInfo(Variant::STRING, "msg"), PropertyInfo(Variant::INT, "level")));
 	ADD_SIGNAL(MethodInfo("stack_dump", PropertyInfo(Variant::ARRAY, "stack_dump")));
 	ADD_SIGNAL(MethodInfo("stack_frame_vars", PropertyInfo(Variant::INT, "num_vars")));
@@ -1949,6 +2019,7 @@ ScriptEditorDebugger::ScriptEditorDebugger() {
 		inspector->set_read_only(true);
 		inspector->connect("object_selected", callable_mp(this, &ScriptEditorDebugger::_remote_object_selected));
 		inspector->connect("object_edited", callable_mp(this, &ScriptEditorDebugger::_remote_object_edited));
+		inspector->connect("multi_objects_edited", callable_mp(this, &ScriptEditorDebugger::_multi_remote_objects_edited));
 		inspector->connect("object_property_updated", callable_mp(this, &ScriptEditorDebugger::_remote_object_property_updated));
 		inspector->register_text_enter(search);
 		inspector->set_use_filter(true);
@@ -2162,9 +2233,7 @@ ScriptEditorDebugger::ScriptEditorDebugger() {
 	msgdialog = memnew(AcceptDialog);
 	add_child(msgdialog);
 
-	live_debug = true;
 	camera_override = CameraOverride::OVERRIDE_NONE;
-	last_path_id = false;
 	error_count = 0;
 	warning_count = 0;
 	_update_buttons_state();

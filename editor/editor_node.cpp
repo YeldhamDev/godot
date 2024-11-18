@@ -2424,6 +2424,7 @@ void EditorNode::push_item(Object *p_object, const String &p_property, bool p_in
 		NodeDock::get_singleton()->set_node(nullptr);
 		SceneTreeDock::get_singleton()->set_selected(nullptr);
 		InspectorDock::get_singleton()->update(nullptr);
+		EditorDebuggerNode::get_singleton()->clear_remote_tree_selection();
 		hide_unused_editors();
 		return;
 	}
@@ -2545,12 +2546,13 @@ void EditorNode::_edit_current(bool p_skip_foreign, bool p_skip_inspector_update
 		InspectorDock::get_inspector_singleton()->edit(nullptr);
 		NodeDock::get_singleton()->set_node(nullptr);
 		InspectorDock::get_singleton()->update(nullptr);
+		EditorDebuggerNode::get_singleton()->clear_remote_tree_selection();
 		hide_unused_editors();
 		return;
 	}
 
 	// Update the use folding setting and state.
-	bool disable_folding = bool(EDITOR_GET("interface/inspector/disable_folding")) || current_obj->is_class("EditorDebuggerRemoteObject");
+	bool disable_folding = bool(EDITOR_GET("interface/inspector/disable_folding")) || current_obj->is_class("EditorDebuggerRemoteObject") || current_obj->is_class("EditorDebuggerMultiRemoteObject");
 	if (InspectorDock::get_inspector_singleton()->is_using_folding() == disable_folding) {
 		InspectorDock::get_inspector_singleton()->set_use_folding(!disable_folding, false);
 	}
@@ -2578,6 +2580,7 @@ void EditorNode::_edit_current(bool p_skip_foreign, bool p_skip_inspector_update
 			SceneTreeDock::get_singleton()->set_selected(nullptr);
 			NodeDock::get_singleton()->set_node(nullptr);
 			InspectorDock::get_singleton()->update(nullptr);
+			EditorDebuggerNode::get_singleton()->clear_remote_tree_selection();
 			ImportDock::get_singleton()->set_edit_path(current_res->get_path());
 		}
 
@@ -2617,6 +2620,7 @@ void EditorNode::_edit_current(bool p_skip_foreign, bool p_skip_inspector_update
 			SceneTreeDock::get_singleton()->set_selected(nullptr);
 			InspectorDock::get_singleton()->update(nullptr);
 		}
+		EditorDebuggerNode::get_singleton()->clear_remote_tree_selection();
 
 		if (get_edited_scene() && !get_edited_scene()->get_scene_file_path().is_empty()) {
 			String source_scene = get_edited_scene()->get_scene_file_path();
@@ -2625,7 +2629,6 @@ void EditorNode::_edit_current(bool p_skip_foreign, bool p_skip_inspector_update
 				info_is_warning = true;
 			}
 		}
-
 	} else {
 		Node *selected_node = nullptr;
 
@@ -2649,6 +2652,10 @@ void EditorNode::_edit_current(bool p_skip_foreign, bool p_skip_inspector_update
 					}
 				}
 			}
+		}
+
+		if (!current_obj->is_class("EditorDebuggerRemoteObject") && !current_obj->is_class("EditorDebuggerMultiRemoteObject")) {
+			EditorDebuggerNode::get_singleton()->clear_remote_tree_selection();
 		}
 
 		InspectorDock::get_inspector_singleton()->edit(current_obj);
@@ -4894,7 +4901,9 @@ Ref<Texture2D> EditorNode::get_object_icon(const Object *p_object, const String 
 
 	Ref<Script> scr = p_object->get_script();
 
-	if (Object::cast_to<EditorDebuggerRemoteObject>(p_object)) {
+	const EditorDebuggerRemoteObject *robj = Object::cast_to<EditorDebuggerRemoteObject>(p_object);
+	const EditorDebuggerMultiRemoteObject *mrobj = Object::cast_to<EditorDebuggerMultiRemoteObject>(p_object);
+	if (robj || mrobj) {
 		String class_name;
 		if (scr.is_valid()) {
 			class_name = scr->get_global_name();
@@ -4904,7 +4913,16 @@ Ref<Texture2D> EditorNode::get_object_icon(const Object *p_object, const String 
 				class_name = scr->get_path();
 			}
 		}
-		return get_class_icon(class_name.is_empty() ? Object::cast_to<EditorDebuggerRemoteObject>(p_object)->type_name : class_name, p_fallback);
+
+		if (class_name.is_empty()) {
+			if (robj) {
+				return get_class_icon(robj->type_name, p_fallback);
+			}
+
+			return get_class_icon(mrobj->type_name, p_fallback);
+		}
+
+		return get_class_icon(class_name, p_fallback);
 	}
 
 	if (scr.is_null() && p_object->is_class("Script")) {

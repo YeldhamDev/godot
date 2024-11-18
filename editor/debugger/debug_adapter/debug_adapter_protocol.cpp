@@ -1171,13 +1171,13 @@ void DebugAdapterProtocol::on_debug_data(const String &p_msg, const Array &p_dat
 	}
 
 	if (p_msg == "scene:inspect_object") {
-		// An object was requested from the debuggee; parse it.
+		// An object was requested from the debugger; parse it.
 		SceneDebuggerObject remote_obj;
 		remote_obj.deserialize(p_data);
 
 		parse_object(remote_obj);
 	} else if (p_msg == "evaluation_return") {
-		// An evaluation was requested from the debuggee; parse it.
+		// An evaluation was requested from the debugger; parse it.
 		DebuggerMarshalls::ScriptStackVariable remote_evaluation;
 		remote_evaluation.deserialize(p_data);
 
