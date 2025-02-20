@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#ifdef RD_ENABLED
 #include "texture_rd.h"
 
 #include "servers/rendering/rendering_device.h"
@@ -359,3 +360,4 @@ Texture3DRD::~Texture3DRD() {
 		texture_rid = RID();
 	}
 }
+#endif // RD_ENABLED
