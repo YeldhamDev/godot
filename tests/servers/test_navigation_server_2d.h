@@ -30,6 +30,8 @@
 
 #pragma once
 
+#ifndef NAVIGATION_2D_DISABLED
+
 #include "modules/navigation_2d/nav_utils_2d.h"
 #include "servers/navigation_server_2d.h"
 
@@ -765,3 +767,5 @@ TEST_SUITE("[Navigation2D]") {
 	}
 }
 } //namespace TestNavigationServer2D
+
+#endif // NAVIGATION_2D_DISABLED

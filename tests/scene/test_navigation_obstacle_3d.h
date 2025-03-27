@@ -30,7 +30,9 @@
 
 #pragma once
 
-#include "scene/3d/navigation_obstacle_3d.h"
+#ifndef NAVIGATION_3D_DISABLED
+
+#include "scene/3d/navigation/navigation_obstacle_3d.h"
 #include "scene/main/window.h"
 
 #include "tests/test_macros.h"
@@ -64,3 +66,5 @@ TEST_SUITE("[Navigation3D]") {
 }
 
 } //namespace TestNavigationObstacle3D
+
+#endif // NAVIGATION_3D_DISABLED

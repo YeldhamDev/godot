@@ -37,10 +37,12 @@
 #include "scene/gui/control.h"
 #include "scene/resources/2d/navigation_mesh_source_geometry_data_2d.h"
 #include "scene/resources/world_2d.h"
+#ifndef NAVIGATION_2D_DISABLED
 #include "servers/navigation_server_2d.h"
 
 Callable TileMapLayer::_navmesh_source_geometry_parsing_callback;
 RID TileMapLayer::_navmesh_source_geometry_parser;
+#endif // NAVIGATION_2D_DISABLED
 
 Vector2i TileMapLayer::_coords_to_quadrant_coords(const Vector2i &p_coords, const int p_quadrant_size) const {
 	return Vector2i(
@@ -139,7 +141,9 @@ void TileMapLayer::_debug_update(bool p_force_cleanup) {
 			CellData &cell_data = *cell_data_list_element->self();
 			if (cell_data.cell.source_id != TileSet::INVALID_SOURCE) {
 				_rendering_draw_cell_debug(ci, quadrant_pos, cell_data);
+#ifndef NAVIGATION_2D_DISABLED
 				_navigation_draw_cell_debug(ci, quadrant_pos, cell_data);
+#endif // NAVIGATION_2D_DISABLED
 				_scenes_draw_cell_debug(ci, quadrant_pos, cell_data);
 				debug_quadrant->drawn_to = true;
 			}
@@ -1130,6 +1134,7 @@ void TileMapLayer::_physics_draw_quadrant_debug(const RID &p_canvas_item, DebugQ
 }
 #endif // DEBUG_ENABLED
 
+#ifndef NAVIGATION_2D_DISABLED
 /////////////////////////////// Navigation //////////////////////////////////////
 
 void TileMapLayer::_navigation_update(bool p_force_cleanup) {
@@ -1402,6 +1407,7 @@ void TileMapLayer::_navigation_draw_cell_debug(const RID &p_canvas_item, const V
 	}
 }
 #endif // DEBUG_ENABLED
+#endif // NAVIGATION_2D_DISABLED
 
 /////////////////////////////// Scenes //////////////////////////////////////
 
@@ -1877,7 +1883,9 @@ void TileMapLayer::_internal_update(bool p_force_cleanup) {
 	// Update all subsystems.
 	_rendering_update(p_force_cleanup);
 	_physics_update(p_force_cleanup);
+#ifndef NAVIGATION_2D_DISABLED
 	_navigation_update(p_force_cleanup);
+#endif // NAVIGATION_2D_DISABLED
 	_scenes_update(p_force_cleanup);
 #ifdef DEBUG_ENABLED
 	_debug_update(p_force_cleanup);
@@ -1979,7 +1987,9 @@ void TileMapLayer::_notification(int p_what) {
 
 	_rendering_notification(p_what);
 	_physics_notification(p_what);
+#ifndef NAVIGATION_2D_DISABLED
 	_navigation_notification(p_what);
+#endif // NAVIGATION_2D_DISABLED
 }
 
 void TileMapLayer::_bind_methods() {
@@ -2055,12 +2065,14 @@ void TileMapLayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_occlusion_enabled", "enabled"), &TileMapLayer::set_occlusion_enabled);
 	ClassDB::bind_method(D_METHOD("is_occlusion_enabled"), &TileMapLayer::is_occlusion_enabled);
 
+#ifndef NAVIGATION_2D_DISABLED
 	ClassDB::bind_method(D_METHOD("set_navigation_enabled", "enabled"), &TileMapLayer::set_navigation_enabled);
 	ClassDB::bind_method(D_METHOD("is_navigation_enabled"), &TileMapLayer::is_navigation_enabled);
 	ClassDB::bind_method(D_METHOD("set_navigation_map", "map"), &TileMapLayer::set_navigation_map);
 	ClassDB::bind_method(D_METHOD("get_navigation_map"), &TileMapLayer::get_navigation_map);
 	ClassDB::bind_method(D_METHOD("set_navigation_visibility_mode", "show_navigation"), &TileMapLayer::set_navigation_visibility_mode);
 	ClassDB::bind_method(D_METHOD("get_navigation_visibility_mode"), &TileMapLayer::get_navigation_visibility_mode);
+#endif // NAVIGATION_2D_DISABLED
 
 	GDVIRTUAL_BIND(_use_tile_data_runtime_update, "coords");
 	GDVIRTUAL_BIND(_tile_data_runtime_update, "coords", "tile_data");
@@ -2080,9 +2092,11 @@ void TileMapLayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_kinematic_bodies"), "set_use_kinematic_bodies", "is_using_kinematic_bodies");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "collision_visibility_mode", PROPERTY_HINT_ENUM, "Default,Force Show,Force Hide"), "set_collision_visibility_mode", "get_collision_visibility_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "physics_quadrant_size"), "set_physics_quadrant_size", "get_physics_quadrant_size");
+#ifndef NAVIGATION_2D_DISABLED
 	ADD_GROUP("Navigation", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "navigation_enabled"), "set_navigation_enabled", "is_navigation_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_visibility_mode", PROPERTY_HINT_ENUM, "Default,Force Show,Force Hide"), "set_navigation_visibility_mode", "get_navigation_visibility_mode");
+#endif // NAVIGATION_2D_DISABLED
 
 	ADD_SIGNAL(MethodInfo(CoreStringName(changed)));
 
@@ -3219,6 +3233,7 @@ bool TileMapLayer::is_occlusion_enabled() const {
 	return occlusion_enabled;
 }
 
+#ifndef NAVIGATION_2D_DISABLED
 void TileMapLayer::set_navigation_enabled(bool p_enabled) {
 	if (navigation_enabled == p_enabled) {
 		return;
@@ -3373,6 +3388,7 @@ void TileMapLayer::navmesh_parse_source_geometry(const Ref<NavigationPolygon> &p
 		}
 	}
 }
+#endif // NAVIGATION_2D_DISABLED
 
 TileMapLayer::TileMapLayer() {
 	set_notify_transform(true);

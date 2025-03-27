@@ -32,7 +32,9 @@
 
 #include "scene/resources/2d/tile_set.h"
 
+#ifndef NAVIGATION_2D_DISABLED
 class NavigationMeshSourceGeometryData2D;
+#endif // NAVIGATION_2D_DISABLED
 class TileSetAtlasSource;
 class TileMap;
 
@@ -444,6 +446,7 @@ private:
 	void _physics_draw_quadrant_debug(const RID &p_canvas_item, DebugQuadrant &r_debug_quadrant);
 #endif // DEBUG_ENABLED
 
+#ifndef NAVIGATION_2D_DISABLED
 	bool _navigation_was_cleaned_up = false;
 	void _navigation_update(bool p_force_cleanup);
 	void _navigation_notification(int p_what);
@@ -452,6 +455,7 @@ private:
 #ifdef DEBUG_ENABLED
 	void _navigation_draw_cell_debug(const RID &p_canvas_item, const Vector2 &p_quadrant_pos, const CellData &r_cell_data);
 #endif // DEBUG_ENABLED
+#endif // NAVIGATION_2D_DISABLED
 
 	bool _scenes_was_cleaned_up = false;
 	void _scenes_update(bool p_force_cleanup);
@@ -606,12 +610,16 @@ public:
 	DebugVisibilityMode get_navigation_visibility_mode() const;
 
 private:
+#ifndef NAVIGATION_2D_DISABLED
 	static Callable _navmesh_source_geometry_parsing_callback;
 	static RID _navmesh_source_geometry_parser;
+#endif // NAVIGATION_2D_DISABLED
 
 public:
+#ifndef NAVIGATION_2D_DISABLED
 	static void navmesh_parse_init();
 	static void navmesh_parse_source_geometry(const Ref<NavigationPolygon> &p_navigation_mesh, Ref<NavigationMeshSourceGeometryData2D> p_source_geometry_data, Node *p_node);
+#endif // NAVIGATION_2D_DISABLED
 
 	TileMapLayer();
 	~TileMapLayer();

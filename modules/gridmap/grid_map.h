@@ -194,11 +194,11 @@ class GridMap : public Node3D {
 	bool _octant_update(const OctantKey &p_key);
 	void _octant_clean_up(const OctantKey &p_key);
 	void _octant_transform(const OctantKey &p_key);
-#ifdef DEBUG_ENABLED
+#if defined(DEBUG_ENABLED) && !defined(NAVIGATION_3D_DISABLED)
 	void _update_octant_navigation_debug_edge_connections_mesh(const OctantKey &p_key);
 	void _navigation_map_changed(RID p_map);
 	void _update_navigation_debug_edge_connections();
-#endif // DEBUG_ENABLED
+#endif // defined(DEBUG_ENABLED) && !defined(NAVIGATION_3D_DISABLED)
 	bool awaiting_update = false;
 
 	void _queue_octants_dirty();
@@ -256,8 +256,10 @@ public:
 	void set_bake_navigation(bool p_bake_navigation);
 	bool is_baking_navigation();
 
+#ifndef NAVIGATION_3D_DISABLED
 	void set_navigation_map(RID p_navigation_map);
 	RID get_navigation_map() const;
+#endif // NAVIGATION_3D_DISABLED
 
 	void set_mesh_library(const Ref<MeshLibrary> &p_mesh_library);
 	Ref<MeshLibrary> get_mesh_library() const;

@@ -131,7 +131,9 @@
 #include "scene/resources/mesh_data_tool.h"
 #include "scene/resources/mesh_texture.h"
 #include "scene/resources/multimesh.h"
+#if !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 #include "scene/resources/navigation_mesh.h"
+#endif // !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/particle_process_material.h"
 #include "scene/resources/physics_material.h"
@@ -176,10 +178,14 @@
 #include "scene/2d/marker_2d.h"
 #include "scene/2d/mesh_instance_2d.h"
 #include "scene/2d/multimesh_instance_2d.h"
-#include "scene/2d/navigation_agent_2d.h"
-#include "scene/2d/navigation_link_2d.h"
-#include "scene/2d/navigation_obstacle_2d.h"
-#include "scene/2d/navigation_region_2d.h"
+#ifndef NAVIGATION_2D_DISABLED
+#include "scene/2d/navigation/navigation_agent_2d.h"
+#include "scene/2d/navigation/navigation_link_2d.h"
+#include "scene/2d/navigation/navigation_obstacle_2d.h"
+#include "scene/2d/navigation/navigation_region_2d.h"
+#include "scene/resources/2d/navigation_mesh_source_geometry_data_2d.h"
+#include "scene/resources/2d/navigation_polygon.h"
+#endif // NAVIGATION_2D_DISABLED
 #include "scene/2d/parallax_2d.h"
 #include "scene/2d/parallax_background.h"
 #include "scene/2d/parallax_layer.h"
@@ -212,8 +218,6 @@
 #include "scene/resources/2d/circle_shape_2d.h"
 #include "scene/resources/2d/concave_polygon_shape_2d.h"
 #include "scene/resources/2d/convex_polygon_shape_2d.h"
-#include "scene/resources/2d/navigation_mesh_source_geometry_data_2d.h"
-#include "scene/resources/2d/navigation_polygon.h"
 #include "scene/resources/2d/polygon_path_finder.h"
 #include "scene/resources/2d/rectangle_shape_2d.h"
 #include "scene/resources/2d/segment_shape_2d.h"
@@ -249,10 +253,13 @@
 #include "scene/3d/marker_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/multimesh_instance_3d.h"
-#include "scene/3d/navigation_agent_3d.h"
-#include "scene/3d/navigation_link_3d.h"
-#include "scene/3d/navigation_obstacle_3d.h"
-#include "scene/3d/navigation_region_3d.h"
+#ifndef NAVIGATION_3D_DISABLED
+#include "scene/3d/navigation/navigation_agent_3d.h"
+#include "scene/3d/navigation/navigation_link_3d.h"
+#include "scene/3d/navigation/navigation_obstacle_3d.h"
+#include "scene/3d/navigation/navigation_region_3d.h"
+#include "scene/resources/3d/navigation_mesh_source_geometry_data_3d.h"
+#endif // NAVIGATION_3D_DISABLED
 #include "scene/3d/node_3d.h"
 #include "scene/3d/occluder_instance_3d.h"
 #include "scene/3d/path_3d.h"
@@ -309,7 +316,6 @@
 #include "scene/resources/3d/height_map_shape_3d.h"
 #include "scene/resources/3d/importer_mesh.h"
 #include "scene/resources/3d/mesh_library.h"
-#include "scene/resources/3d/navigation_mesh_source_geometry_data_3d.h"
 #include "scene/resources/3d/primitive_meshes.h"
 #include "scene/resources/3d/separation_ray_shape_3d.h"
 #include "scene/resources/3d/sky_material.h"
@@ -667,10 +673,13 @@ void register_scene_types() {
 	GDREGISTER_CLASS(ConeTwistJoint3D);
 	GDREGISTER_CLASS(Generic6DOFJoint3D);
 
+#ifndef NAVIGATION_3D_DISABLED
+	GDREGISTER_CLASS(NavigationMeshSourceGeometryData3D);
 	GDREGISTER_CLASS(NavigationRegion3D);
 	GDREGISTER_CLASS(NavigationAgent3D);
 	GDREGISTER_CLASS(NavigationObstacle3D);
 	GDREGISTER_CLASS(NavigationLink3D);
+#endif // NAVIGATION_3D_DISABLED
 
 	OS::get_singleton()->yield(); // may take time to init
 #endif // _3D_DISABLED
@@ -919,7 +928,6 @@ void register_scene_types() {
 	BaseMaterial3D::init_shaders();
 
 	GDREGISTER_CLASS(MeshLibrary);
-	GDREGISTER_CLASS(NavigationMeshSourceGeometryData3D);
 
 	OS::get_singleton()->yield(); // may take time to init
 
@@ -1041,7 +1049,11 @@ void register_scene_types() {
 	GDREGISTER_CLASS(PathFollow2D);
 	GDREGISTER_CLASS(PolygonPathFinder);
 
+#if !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 	GDREGISTER_CLASS(NavigationMesh);
+#endif // !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
+
+#ifndef NAVIGATION_2D_DISABLED
 	GDREGISTER_CLASS(NavigationMeshSourceGeometryData2D);
 	GDREGISTER_CLASS(NavigationPolygon);
 	GDREGISTER_CLASS(NavigationRegion2D);
@@ -1059,15 +1071,19 @@ void register_scene_types() {
 	TileMap::navmesh_parse_init();
 	TileMapLayer::navmesh_parse_init();
 	StaticBody2D::navmesh_parse_init();
-#ifndef _3D_DISABLED
+#endif // NAVIGATION_2D_DISABLED
+
+#ifndef NAVIGATION_3D_DISABLED
 	// 3D nodes that support navmesh baking need to server register their source geometry parsers.
 	MeshInstance3D::navmesh_parse_init();
 	MultiMeshInstance3D::navmesh_parse_init();
 	NavigationObstacle3D::navmesh_parse_init();
 	StaticBody3D::navmesh_parse_init();
-#endif // _3D_DISABLED
+#endif // NAVIGATION_3D_DISABLED
 
+#if !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 	OS::get_singleton()->yield(); // may take time to init
+#endif // !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 
 	GDREGISTER_ABSTRACT_CLASS(SceneState);
 	GDREGISTER_CLASS(PackedScene);
@@ -1083,8 +1099,10 @@ void register_scene_types() {
 	ClassDB::add_compatibility_class("BitmapFont", "FontFile");
 	ClassDB::add_compatibility_class("DynamicFont", "FontFile");
 	ClassDB::add_compatibility_class("DynamicFontData", "FontFile");
+#ifndef NAVIGATION_3D_DISABLED
 	ClassDB::add_compatibility_class("Navigation3D", "Node3D");
 	ClassDB::add_compatibility_class("Navigation2D", "Node2D");
+#endif // NAVIGATION_3D_DISABLED
 	ClassDB::add_compatibility_class("OpenSimplexNoise", "FastNoiseLite");
 	ClassDB::add_compatibility_class("ProximityGroup", "Node3D");
 	ClassDB::add_compatibility_class("ToolButton", "Button");
@@ -1152,13 +1170,17 @@ void register_scene_types() {
 	ClassDB::add_compatibility_class("Listener", "AudioListener3D");
 	ClassDB::add_compatibility_class("MeshInstance", "MeshInstance3D");
 	ClassDB::add_compatibility_class("MultiMeshInstance", "MultiMeshInstance3D");
+#ifndef NAVIGATION_3D_DISABLED
 	ClassDB::add_compatibility_class("NavigationAgent", "NavigationAgent3D");
 	ClassDB::add_compatibility_class("NavigationMeshInstance", "NavigationRegion3D");
 	ClassDB::add_compatibility_class("NavigationObstacle", "NavigationObstacle3D");
-	ClassDB::add_compatibility_class("NavigationPolygonInstance", "NavigationRegion2D");
 	ClassDB::add_compatibility_class("NavigationRegion", "NavigationRegion3D");
-	ClassDB::add_compatibility_class("Navigation2DServer", "NavigationServer2D");
 	ClassDB::add_compatibility_class("NavigationServer", "NavigationServer3D");
+#endif // NAVIGATION_3D_DISABLED
+#ifndef NAVIGATION_2D_DISABLED
+	ClassDB::add_compatibility_class("NavigationPolygonInstance", "NavigationRegion2D");
+	ClassDB::add_compatibility_class("Navigation2DServer", "NavigationServer2D");
+#endif // NAVIGATION_2D_DISABLED
 	ClassDB::add_compatibility_class("OmniLight", "OmniLight3D");
 	ClassDB::add_compatibility_class("PanoramaSky", "Sky");
 	ClassDB::add_compatibility_class("Particles", "GPUParticles3D");
@@ -1269,9 +1291,13 @@ void register_scene_types() {
 
 	for (int i = 0; i < 32; i++) {
 		GLOBAL_DEF_BASIC(vformat("%s/layer_%d", PNAME("layer_names/2d_physics"), i + 1), "");
+#ifndef NAVIGATION_2D_DISABLED
 		GLOBAL_DEF_BASIC(vformat("%s/layer_%d", PNAME("layer_names/2d_navigation"), i + 1), "");
+#endif // NAVIGATION_2D_DISABLED
 		GLOBAL_DEF_BASIC(vformat("%s/layer_%d", PNAME("layer_names/3d_physics"), i + 1), "");
+#ifndef NAVIGATION_3D_DISABLED
 		GLOBAL_DEF_BASIC(vformat("%s/layer_%d", PNAME("layer_names/3d_navigation"), i + 1), "");
+#endif // NAVIGATION_3D_DISABLED
 	}
 
 	for (int i = 0; i < 32; i++) {

@@ -32,7 +32,9 @@
 
 #include "core/config/project_settings.h"
 #include "scene/2d/visible_on_screen_notifier_2d.h"
+#ifndef NAVIGATION_2D_DISABLED
 #include "servers/navigation_server_2d.h"
+#endif // NAVIGATION_2D_DISABLED
 #include "servers/physics_server_2d.h"
 #include "servers/rendering_server.h"
 
@@ -52,6 +54,7 @@ RID World2D::get_space() const {
 	return space;
 }
 
+#ifndef NAVIGATION_2D_DISABLED
 RID World2D::get_navigation_map() const {
 	if (navigation_map.is_null()) {
 		navigation_map = NavigationServer2D::get_singleton()->map_create();
@@ -63,6 +66,7 @@ RID World2D::get_navigation_map() const {
 	}
 	return navigation_map;
 }
+#endif // NAVIGATION_2D_DISABLED
 
 PhysicsDirectSpaceState2D *World2D::get_direct_space_state() {
 	return PhysicsServer2D::get_singleton()->space_get_direct_state(get_space());
@@ -71,13 +75,17 @@ PhysicsDirectSpaceState2D *World2D::get_direct_space_state() {
 void World2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_canvas"), &World2D::get_canvas);
 	ClassDB::bind_method(D_METHOD("get_space"), &World2D::get_space);
+#ifndef NAVIGATION_2D_DISABLED
 	ClassDB::bind_method(D_METHOD("get_navigation_map"), &World2D::get_navigation_map);
+#endif // NAVIGATION_2D_DISABLED
 
 	ClassDB::bind_method(D_METHOD("get_direct_space_state"), &World2D::get_direct_space_state);
 
 	ADD_PROPERTY(PropertyInfo(Variant::RID, "canvas", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "", "get_canvas");
 	ADD_PROPERTY(PropertyInfo(Variant::RID, "space", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "", "get_space");
+#ifndef NAVIGATION_2D_DISABLED
 	ADD_PROPERTY(PropertyInfo(Variant::RID, "navigation_map", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "", "get_navigation_map");
+#endif // NAVIGATION_2D_DISABLED
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "direct_space_state", PROPERTY_HINT_RESOURCE_TYPE, "PhysicsDirectSpaceState2D", PROPERTY_USAGE_NONE), "", "get_direct_space_state");
 }
 
@@ -96,12 +104,16 @@ World2D::World2D() {
 World2D::~World2D() {
 	ERR_FAIL_NULL(RenderingServer::get_singleton());
 	ERR_FAIL_NULL(PhysicsServer2D::get_singleton());
+#ifndef NAVIGATION_2D_DISABLED
 	ERR_FAIL_NULL(NavigationServer2D::get_singleton());
+#endif // NAVIGATION_2D_DISABLED
 	RenderingServer::get_singleton()->free(canvas);
 	if (space.is_valid()) {
 		PhysicsServer2D::get_singleton()->free(space);
 	}
+#ifndef NAVIGATION_2D_DISABLED
 	if (navigation_map.is_valid()) {
 		NavigationServer2D::get_singleton()->free(navigation_map);
 	}
+#endif // NAVIGATION_2D_DISABLED
 }

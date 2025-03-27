@@ -30,7 +30,9 @@
 
 #pragma once
 
-#include "scene/3d/navigation_agent_3d.h"
+#ifndef NAVIGATION_3D_DISABLED
+
+#include "scene/3d/navigation/navigation_agent_3d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/main/window.h"
 
@@ -66,3 +68,5 @@ TEST_SUITE("[Navigation3D]") {
 }
 
 } //namespace TestNavigationAgent3D
+
+#endif // NAVIGATION_3D_DISABLED

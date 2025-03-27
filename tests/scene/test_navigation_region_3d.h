@@ -30,8 +30,10 @@
 
 #pragma once
 
+#ifndef NAVIGATION_3D_DISABLED
+
 #include "scene/3d/mesh_instance_3d.h"
-#include "scene/3d/navigation_region_3d.h"
+#include "scene/3d/navigation/navigation_region_3d.h"
 #include "scene/main/window.h"
 #include "scene/resources/3d/primitive_meshes.h"
 
@@ -79,3 +81,5 @@ TEST_SUITE("[Navigation3D]") {
 }
 
 } //namespace TestNavigationRegion3D
+
+#endif // NAVIGATION_3D_DISABLED

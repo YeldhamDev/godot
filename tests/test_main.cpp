@@ -193,7 +193,9 @@
 #include "tests/test_macros.h"
 
 #include "scene/theme/theme_db.h"
+#ifndef NAVIGATION_2D_DISABLED
 #include "servers/navigation_server_2d.h"
+#endif // NAVIGATION_2D_DISABLED
 #ifndef _3D_DISABLED
 #include "servers/navigation_server_3d.h"
 #endif // _3D_DISABLED
@@ -280,9 +282,13 @@ struct GodotTestCaseListener : public doctest::IReporter {
 	PhysicsServer2D *physics_server_2d = nullptr;
 #ifndef _3D_DISABLED
 	PhysicsServer3D *physics_server_3d = nullptr;
-	NavigationServer3D *navigation_server_3d = nullptr;
 #endif // _3D_DISABLED
+#ifndef NAVIGATION_3D_DISABLED
+	NavigationServer3D *navigation_server_3d = nullptr;
+#endif // NAVIGATION_3D_DISABLED
+#ifndef NAVIGATION_2D_DISABLED
 	NavigationServer2D *navigation_server_2d = nullptr;
+#endif // NAVIGATION_2D_DISABLED
 
 	void test_case_start(const doctest::TestCaseData &p_in) override {
 		reinitialize();
@@ -329,10 +335,12 @@ struct GodotTestCaseListener : public doctest::IReporter {
 			physics_server_2d->init();
 
 			ERR_PRINT_OFF;
-#ifndef _3D_DISABLED
+#ifndef NAVIGATION_3D_DISABLED
 			navigation_server_3d = NavigationServer3DManager::new_default_server();
-#endif // _3D_DISABLED
+#endif // NAVIGATION_3D_DISABLED
+#ifndef NAVIGATION_2D_DISABLED
 			navigation_server_2d = NavigationServer2DManager::new_default_server();
+#endif // NAVIGATION_2D_DISABLED
 			ERR_PRINT_ON;
 
 			memnew(InputMap);
@@ -364,21 +372,23 @@ struct GodotTestCaseListener : public doctest::IReporter {
 			return;
 		}
 
-#ifndef _3D_DISABLED
+#ifndef NAVIGATION_3D_DISABLED
 		if (suite_name.contains("[Navigation3D]") && navigation_server_3d == nullptr) {
 			ERR_PRINT_OFF;
 			navigation_server_3d = NavigationServer3DManager::new_default_server();
 			ERR_PRINT_ON;
 			return;
 		}
-#endif // _3D_DISABLED
+#endif // NAVIGATION_3D_DISABLED
 
+#ifndef NAVIGATION_2D_DISABLED
 		if (suite_name.contains("[Navigation2D]") && navigation_server_2d == nullptr) {
 			ERR_PRINT_OFF;
 			navigation_server_2d = NavigationServer2DManager::new_default_server();
 			ERR_PRINT_ON;
 			return;
 		}
+#endif // NAVIGATION_2D_DISABLED
 	}
 
 	void test_case_end(const doctest::CurrentTestCaseStats &) override {
@@ -408,17 +418,19 @@ struct GodotTestCaseListener : public doctest::IReporter {
 			memdelete(SceneTree::get_singleton());
 		}
 
-#ifndef _3D_DISABLED
+#ifndef NAVIGATION_3D_DISABLED
 		if (navigation_server_3d) {
 			memdelete(navigation_server_3d);
 			navigation_server_3d = nullptr;
 		}
-#endif // _3D_DISABLED
+#endif // NAVIGATION_3D_DISABLED
 
+#ifndef NAVIGATION_2D_DISABLED
 		if (navigation_server_2d) {
 			memdelete(navigation_server_2d);
 			navigation_server_2d = nullptr;
 		}
+#endif // NAVIGATION_2D_DISABLED
 
 #ifndef _3D_DISABLED
 		if (physics_server_3d) {
