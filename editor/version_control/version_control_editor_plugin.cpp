@@ -290,7 +290,9 @@ void VersionControlEditorPlugin::_commit() {
 
 	EditorVCSInterface::get_singleton()->commit(msg);
 
-	EditorNode::get_bottom_panel()->make_item_visible(version_control_dock, false);
+	if (version_control_dock->get_current_layout() != EditorDock::DOCK_LAYOUT_FLOATING) {
+		version_control_dock->hide();
+	}
 
 	commit_message->release_focus();
 	commit_button->release_focus();
@@ -502,7 +504,7 @@ void VersionControlEditorPlugin::_move_all(Object *p_tree) {
 void VersionControlEditorPlugin::_load_diff(Object *p_tree) {
 	CHECK_PLUGIN_INITIALIZED();
 
-	EditorNode::get_bottom_panel()->make_item_visible(version_control_dock, true, true);
+	version_control_dock->make_visible();
 
 	Tree *tree = Object::cast_to<Tree>(p_tree);
 	if (tree == staged_files) {
@@ -923,8 +925,7 @@ void VersionControlEditorPlugin::fetch_available_vcs_plugin_names() {
 
 void VersionControlEditorPlugin::register_editor() {
 	EditorDockManager::get_singleton()->add_dock(version_commit_dock);
-
-	EditorNode::get_bottom_panel()->add_item(TTRC("Version Control"), version_control_dock, ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_version_control_bottom_panel", TTRC("Toggle Version Control Bottom Panel")));
+	EditorDockManager::get_singleton()->add_dock(version_control_dock);
 
 	_set_vcs_ui_state(true);
 }
@@ -943,7 +944,7 @@ void VersionControlEditorPlugin::shut_down() {
 	EditorVCSInterface::set_singleton(nullptr);
 
 	EditorDockManager::get_singleton()->remove_dock(version_commit_dock);
-	EditorNode::get_bottom_panel()->remove_item(version_control_dock);
+	EditorDockManager::get_singleton()->remove_dock(version_control_dock);
 
 	_set_vcs_ui_state(false);
 }
@@ -1497,15 +1498,26 @@ VersionControlEditorPlugin::VersionControlEditorPlugin() {
 	change_type_to_icon[EditorVCSInterface::CHANGE_TYPE_DELETED] = EditorNode::get_singleton()->get_editor_theme()->get_icon(SNAME("StatusError"), EditorStringName(EditorIcons));
 	change_type_to_icon[EditorVCSInterface::CHANGE_TYPE_UNMERGED] = EditorNode::get_singleton()->get_editor_theme()->get_icon(SNAME("StatusWarning"), EditorStringName(EditorIcons));
 
-	version_control_dock = memnew(VBoxContainer);
-	version_control_dock->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	version_control_dock = memnew(EditorDock);
+	version_control_dock->set_name(TTRC("Version Control"));
+	version_control_dock->set_icon_name("VcsBranches");
+	version_control_dock->set_dock_shortcut(ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_version_control_bottom_panel", TTRC("Toggle Version Control Bottom Panel")));
+	version_control_dock->set_default_slot(EditorDock::DOCK_SLOT_BOTTOM);
+	version_control_dock->set_available_layouts(EditorDock::DOCK_LAYOUT_HORIZONTAL | EditorDock::DOCK_LAYOUT_FLOATING);
+	version_control_dock->set_global(false);
+	version_control_dock->set_transient(true);
+	version_control_dock->set_closable(true);
 	version_control_dock->set_custom_minimum_size(Size2(0, 300) * EDSCALE);
-	version_control_dock->hide();
+	version_commit_dock->connect("opened", callable_mp(EditorDockManager::get_singleton(), &EditorDockManager::open_dock).bind(version_control_dock, false));
+	version_commit_dock->connect("closed", callable_mp(EditorDockManager::get_singleton(), &EditorDockManager::close_dock).bind(version_control_dock));
+
+	VBoxContainer *vbc = memnew(VBoxContainer);
+	version_control_dock->add_child(vbc);
 
 	HBoxContainer *diff_heading = memnew(HBoxContainer);
 	diff_heading->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	diff_heading->set_tooltip_text(TTR("View file diffs before committing them to the latest version"));
-	version_control_dock->add_child(diff_heading);
+	vbc->add_child(diff_heading);
 
 	diff_title = memnew(Label);
 	diff_title->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
@@ -1529,7 +1541,7 @@ VersionControlEditorPlugin::VersionControlEditorPlugin() {
 	diff->set_use_bbcode(true);
 	diff->set_selection_enabled(true);
 	diff->set_context_menu_enabled(true);
-	version_control_dock->add_child(diff);
+	vbc->add_child(diff);
 
 	_update_set_up_warning("");
 	EditorNode::get_singleton()->get_gui_base()->connect(SceneStringName(theme_changed), callable_mp(this, &VersionControlEditorPlugin::_update_theme));
