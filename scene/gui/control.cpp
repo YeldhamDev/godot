@@ -1692,10 +1692,6 @@ void Control::update_minimum_size() {
 		invalidate = invalidate->get_parent_control();
 	}
 
-	if (!is_visible_in_tree()) {
-		return;
-	}
-
 	if (data.updating_last_minimum_size) {
 		return;
 	}
