@@ -76,10 +76,23 @@ void GameViewDebugger::_session_started(Ref<EditorDebuggerSession> p_session) {
 	settings["editors/3d/navigation/invert_y_axis"] = EDITOR_GET("editors/3d/navigation/invert_y_axis");
 	settings["editors/3d/navigation/warped_mouse_panning"] = EDITOR_GET("editors/3d/navigation/warped_mouse_panning");
 	settings["editors/3d/freelook/freelook_base_speed"] = EDITOR_GET("editors/3d/freelook/freelook_base_speed");
+	settings["editors/3d/freelook/freelook_speed_zoom_link"] = EDITOR_GET("editors/3d/freelook/freelook_speed_zoom_link");
 	settings["editors/3d/freelook/freelook_sensitivity"] = EDITOR_GET("editors/3d/freelook/freelook_sensitivity");
 	settings["editors/3d/navigation_feel/orbit_sensitivity"] = EDITOR_GET("editors/3d/navigation_feel/orbit_sensitivity");
 	settings["editors/3d/navigation_feel/translation_sensitivity"] = EDITOR_GET("editors/3d/navigation_feel/translation_sensitivity");
+	settings["editors/3d/freelook/freelook_navigation_scheme"] = EDITOR_GET("editors/3d/freelook/freelook_navigation_scheme");
+	settings["editors/3d/navigation_feel/angle_snap_threshold"] = EDITOR_GET("editors/3d/navigation_feel/angle_snap_threshold");
 	settings["editors/3d/selection_box_color"] = EDITOR_GET("editors/3d/selection_box_color");
+	settings["spatial_editor/freelook_forward"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_forward"));
+	settings["spatial_editor/freelook_backwards"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_backwards"));
+	settings["spatial_editor/freelook_left"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_left"));
+	settings["spatial_editor/freelook_right"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_right"));
+	settings["spatial_editor/freelook_up"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_up"));
+	settings["spatial_editor/freelook_down"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_down"));
+	settings["spatial_editor/freelook_speed_modifier"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_speed_modifier"));
+	settings["spatial_editor/freelook_slow_modifier"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/freelook_slow_modifier"));
+	settings["spatial_editor/viewport_orbit_snap_modifier_1"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/viewport_orbit_snap_modifier_1"));
+	settings["spatial_editor/viewport_orbit_snap_modifier_2"] = DebuggerMarshalls::serialize_key_shortcut(ED_GET_SHORTCUT("spatial_editor/viewport_orbit_snap_modifier_2"));
 
 	Array setup_data;
 	setup_data.append(settings);

@@ -32,13 +32,14 @@
 
 #ifdef DEBUG_ENABLED
 
-#include "scene/gui/view_panner.h"
 #ifndef _3D_DISABLED
+#include "scene/debugger/cursor_manipulator.h"
 #include "scene/resources/mesh.h"
 #endif // _3D_DISABLED
 
 class Node;
 class PopupMenu;
+class ViewPanner;
 
 class RuntimeNodeSelect : public Object {
 	GDCLASS(RuntimeNodeSelect, Object);
@@ -114,28 +115,11 @@ private:
 	RID sbox_2d_ci;
 
 #ifndef _3D_DISABLED
-	struct Cursor {
-		Vector3 pos;
-		real_t x_rot, y_rot, distance, fov_scale;
-		Vector3 eye_pos; // Used in freelook mode.
+	Ref<CursorManipulator> cursor_manipulator;
+	CursorManipulator::Cursor cursor;
 
-		Cursor() {
-			// These rotations place the camera in +X +Y +Z, aka south east, facing north west.
-			x_rot = 0.5;
-			y_rot = -0.5;
-			distance = 4;
-			fov_scale = 1.0;
-		}
-	};
-	Cursor cursor;
-
-	// Values taken from Node3DEditor.
-	const float VIEW_3D_MIN_ZOOM = 0.01;
-#ifdef REAL_T_IS_DOUBLE
-	const double VIEW_3D_MAX_ZOOM = 1'000'000'000'000;
-#else
-	const float VIEW_3D_MAX_ZOOM = 10'000;
-#endif // REAL_T_IS_DOUBLE
+	float freelook_base_speed = 5;
+	bool freelook_speed_zoom_link = false;
 
 	const float CAMERA_MIN_FOV_SCALE = 0.1;
 	const float CAMERA_MAX_FOV_SCALE = 2.5;
@@ -146,14 +130,7 @@ private:
 	real_t camera_znear = 0;
 	real_t camera_zfar = 0;
 
-	bool invert_x_axis = false;
-	bool invert_y_axis = false;
 	bool warped_mouse_panning_3d = false;
-
-	real_t freelook_base_speed = 0;
-	real_t freelook_sensitivity = 0;
-	real_t orbit_sensitivity = 0;
-	real_t translation_sensitivity = 0;
 
 	Vector2 previous_mouse_position;
 
@@ -227,13 +204,10 @@ private:
 
 	bool _handle_3d_input(const Ref<InputEvent> &p_event);
 	void _set_camera_freelook_enabled(bool p_enabled);
-	void _cursor_scale_distance(real_t p_scale);
-	void _scale_freelook_speed(real_t p_scale);
-	void _cursor_look(Ref<InputEventWithModifiers> p_event);
 	void _cursor_pan(Ref<InputEventWithModifiers> p_event);
 	void _cursor_orbit(Ref<InputEventWithModifiers> p_event);
+	void _cursor_look(Ref<InputEventWithModifiers> p_event);
 	Point2 _get_warped_mouse_motion(const Ref<InputEventMouseMotion> &p_event, Rect2 p_border) const;
-	Transform3D _get_cursor_transform();
 	void _reset_camera_3d();
 #endif // _3D_DISABLED
 

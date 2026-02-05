@@ -34,6 +34,7 @@
 #include "editor/plugins/editor_plugin.h"
 #include "editor/scene/3d/node_3d_editor_gizmos.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/debugger/cursor_manipulator.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
 #include "scene/gui/spin_box.h"
@@ -191,20 +192,6 @@ public:
 
 	static constexpr int32_t FRAME_TIME_HISTORY = 20;
 
-	enum NavigationScheme {
-		NAVIGATION_GODOT = 0,
-		NAVIGATION_MAYA = 1,
-		NAVIGATION_MODO = 2,
-		NAVIGATION_CUSTOM = 3,
-		NAVIGATION_TABLET = 4,
-	};
-
-	enum FreelookNavigationScheme {
-		FREELOOK_DEFAULT,
-		FREELOOK_PARTIALLY_AXIS_LOCKED,
-		FREELOOK_FULLY_AXIS_LOCKED,
-	};
-
 	enum ViewportNavMouseButton {
 		NAVIGATION_LEFT_MOUSE,
 		NAVIGATION_MIDDLE_MOUSE,
@@ -259,13 +246,11 @@ private:
 	bool transforming = false;
 	bool orthogonal;
 	bool auto_orthogonal;
-	bool lock_rotation;
 	bool transform_gizmo_visible = true;
 	bool collision_reposition = false;
 	real_t gizmo_scale;
 
 	bool freelook_active;
-	real_t freelook_speed;
 	Vector2 previous_mouse_position;
 
 	PanelContainer *info_panel = nullptr;
@@ -339,11 +324,6 @@ private:
 
 	PopupMenu *selection_menu = nullptr;
 
-	enum NavigationZoomStyle {
-		NAVIGATION_ZOOM_VERTICAL,
-		NAVIGATION_ZOOM_HORIZONTAL
-	};
-
 	enum NavigationMode {
 		NAVIGATION_NONE,
 		NAVIGATION_PAN,
@@ -410,34 +390,17 @@ private:
 		bool gizmo_initiated = false;
 	} _edit;
 
-	struct Cursor {
-		Vector3 pos;
-		real_t x_rot, y_rot, distance, fov_scale;
-		real_t unsnapped_x_rot, unsnapped_y_rot;
-		Vector3 eye_pos; // Used in freelook mode
-		bool region_select;
-		Point2 region_begin, region_end;
+	Ref<CursorManipulator> cursor_manipulator;
+	void _update_cursor_manipulator(bool p_update_all = true);
 
-		Cursor() {
-			// These rotations place the camera in +X +Y +Z, aka south east, facing north west.
-			x_rot = 0.5;
-			y_rot = -0.5;
-			unsnapped_x_rot = x_rot;
-			unsnapped_y_rot = y_rot;
-			distance = 4;
-			fov_scale = 1.0;
-			region_select = false;
-		}
-	};
 	// Viewport camera supports movement smoothing,
 	// so one cursor is the real cursor, while the other can be an interpolated version.
-	Cursor cursor; // Immediate cursor
-	Cursor camera_cursor; // That one may be interpolated (don't modify this one except for smoothing purposes)
-	Cursor previous_cursor; // Storing previous cursor state for canceling purposes
+	CursorManipulator::Cursor cursor; // Immediate cursor
+	CursorManipulator::Cursor camera_cursor; // That one may be interpolated (don't modify this one except for smoothing purposes)
+	CursorManipulator::Cursor previous_cursor; // Storing previous cursor state for canceling purposes
 
 	void scale_fov(real_t p_fov_offset);
 	void reset_fov();
-	void scale_cursor_distance(real_t scale);
 
 	struct ShortcutCheckSet {
 		bool mod_pressed = false;
@@ -479,7 +442,6 @@ private:
 	void _view_settings_confirmed(real_t p_interp_delta);
 	void _update_camera(real_t p_interp_delta);
 	void _update_navigation_controls_visibility();
-	Transform3D to_camera_transform(const Cursor &p_cursor) const;
 	void _draw();
 
 	// These allow tool scripts to set the 3D cursor location by updating the camera transform.
@@ -494,7 +456,6 @@ private:
 
 	void input(const Ref<InputEvent> &p_event) override;
 	void _sinput(const Ref<InputEvent> &p_event);
-	void _update_freelook(real_t delta);
 	Node3DEditor *spatial_editor = nullptr;
 
 	Camera3D *previewing = nullptr;
@@ -733,9 +694,9 @@ private:
 
 	DynamicBVH gizmo_bvh;
 
-	real_t snap_translate_value;
-	real_t snap_rotate_value;
-	real_t snap_scale_value;
+	real_t snap_translate_value = 0;
+	real_t snap_rotate_value = 0;
+	real_t snap_scale_value = 0;
 
 	Ref<ArrayMesh> active_selection_box_xray;
 	Ref<ArrayMesh> active_selection_box;
